@@ -43,6 +43,7 @@ def generate(base_feat_df: pd.DataFrame, df: pd.DataFrame, cfg: FeatureConfig,
 
     # ---- 类别×类别：两两维度拼成交叉派生维度，对 top-K 组合按窗口算 笔数 + 金额 ----
     # 在 train 上选每对维度出现最多的 top-K 联合组合，保证 train/test 列对齐。
+    # 列名用 _c{idx} 索引避开中文/=/×，实际组合值在数据字典"含义"列里。
     train_df = df[train_mask]
     m0 = cfg.measure_cols[0] if cfg.measure_cols else None
     windows = list(cfg.windows) + [None]  # None = 全历史
@@ -53,14 +54,14 @@ def generate(base_feat_df: pd.DataFrame, df: pd.DataFrame, cfg: FeatureConfig,
             wtag = "all" if w is None else f"{w}d"
             win = window_slice(df, w)
             joint = win[a].astype(str) + "_" + win[b].astype(str)
-            for combo in top_combos:
+            for idx, combo in enumerate(top_combos):
                 sub = win[joint.values == combo]
                 gsub = sub.groupby(sub[sk])
-                cname = f"f4_cnt_{wtag}__{a}x{b}={combo}"
+                cname = f"f4_cnt_{wtag}__{a}_x_{b}_c{idx}"
                 feats[cname] = gsub.size().reindex(base_index, fill_value=0)
                 feat_dict.append(_d(cname, f"近{wtag} {cfg.col_label(a)}×{cfg.col_label(b)}={combo} 的笔数"))
                 if m0:
-                    aname = f"f4_{m0}sum_{wtag}__{a}x{b}={combo}"
+                    aname = f"f4_{m0}sum_{wtag}__{a}_x_{b}_c{idx}"
                     feats[aname] = gsub[m0].sum().reindex(base_index, fill_value=0)
                     feat_dict.append(_d(aname, f"近{wtag} {cfg.col_label(a)}×{cfg.col_label(b)}={combo} 的{cfg.col_label(m0)}合计"))
 

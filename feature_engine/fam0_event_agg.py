@@ -68,17 +68,18 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
             feat_dict.append(_d(name, f"近{tag} {cfg.col_label(c)} 的唯一值个数"))
 
         # 维度 top-K 类别 pivot：分类计数 + 分类金额
+        # 列名用 _c{idx} 索引(避开中文/=/特殊字符)，实际类别在数据字典的"含义"里查
         for c in cfg.dim_cols:
-            for cat in top_cats[c]:
+            for idx, cat in enumerate(top_cats[c]):
                 sub = win[win[c].astype(str) == cat]
                 gsub = sub.groupby(sk)
-                cname = f"f0_cnt_{tag}__{c}={cat}"
+                cname = f"f0_cnt_{tag}__{c}_c{idx}"
                 feats[cname] = gsub.size()
                 feat_dict.append(_d(cname, f"近{tag} {cfg.col_label(c)}={cat} 的笔数"))
                 # 若有第一个度量列，再出该类别的金额和
                 if cfg.measure_cols:
                     m0 = cfg.measure_cols[0]
-                    aname = f"f0_{m0}sum_{tag}__{c}={cat}"
+                    aname = f"f0_{m0}sum_{tag}__{c}_c{idx}"
                     feats[aname] = gsub[m0].sum()
                     feat_dict.append(_d(aname, f"近{tag} {cfg.col_label(c)}={cat} 的{cfg.col_label(m0)}合计"))
 

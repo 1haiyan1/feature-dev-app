@@ -71,10 +71,10 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
         else:
             cat_iter = list(df[train_mask][c].astype(str).value_counts()
                             .head(cfg.top_k_categories).index)
-        for cat in cat_iter:
+        for idx, cat in enumerate(cat_iter):
             cat_amt = cell[cell[c].astype(str) == str(cat)].set_index(sk)["v"]
             total_amt = cell.groupby(sk)["v"].sum()
-            name = f"f2_share_{c}={cat}"
+            name = f"f2_share_{c}_c{idx}"
             feats[name] = safe_divide(cat_amt.reindex(base_index, fill_value=0),
                                       total_amt.reindex(base_index, fill_value=0))
             feat_dict.append(_d(name, f"{cfg.col_label(c)}={cat} 占该维度总额的比例"))
