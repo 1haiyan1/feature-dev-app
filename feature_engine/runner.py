@@ -129,7 +129,7 @@ def _validate(df: pd.DataFrame, cfg: FeatureConfig) -> None:
     for c in sk_parts:
         if c not in df.columns:
             raise ValueError(f"样本主键 {c!r} 不在数据列中")
-    for c in cfg.dim_cols + cfg.measure_cols:
+    for c in cfg.dim_cols + cfg.measure_cols + cfg.distinct_cols:
         if c not in df.columns:
             raise ValueError(f"配置列 {c!r} 不在数据列中")
     if 5 in cfg.enabled_families() and not cfg.label_col:

@@ -61,12 +61,11 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
                 feats[name] = g[m].agg(func)
                 feat_dict.append(_d(name, f"近{tag} {cfg.col_label(m)} 的{agg}"))
 
-        # 维度去重类别数
-        if "nunique" in cfg.aggs:
-            for c in cfg.dim_cols:
-                name = f"f0_{c}_nunique_{tag}"
-                feats[name] = g[c].nunique()
-                feat_dict.append(_d(name, f"近{tag} {cfg.col_label(c)} 的去重类别数"))
+        # 去重计数列：窗口内唯一值个数（如机构数、设备数）
+        for c in cfg.distinct_cols:
+            name = f"f0_{c}_nunique_{tag}"
+            feats[name] = g[c].nunique()
+            feat_dict.append(_d(name, f"近{tag} {cfg.col_label(c)} 的唯一值个数"))
 
         # 维度 top-K 类别 pivot：分类计数 + 分类金额
         for c in cfg.dim_cols:

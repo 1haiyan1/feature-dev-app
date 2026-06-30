@@ -41,17 +41,33 @@ def generate(base_feat_df: pd.DataFrame, df: pd.DataFrame, cfg: FeatureConfig,
             feats[dname] = base_feat_df[a].fillna(0) - base_feat_df[b].fillna(0)
             feat_dict.append(_d(dname, f"{a} 与 {b} 的差值"))
 
-    # ---- 类别×类别：联合键去重数 ----
-    full = window_slice(df, None)
+    # ---- 类别×类别：两两维度拼成交叉派生维度，对 top-K 组合按窗口算 笔数 + 金额 ----
+    # 在 train 上选每对维度出现最多的 top-K 联合组合，保证 train/test 列对齐。
+    train_df = df[train_mask]
+    m0 = cfg.measure_cols[0] if cfg.measure_cols else None
+    windows = list(cfg.windows) + [None]  # None = 全历史
     for a, b in combinations(cfg.dim_cols, 2):
-        joint = full[a].astype(str) + "|" + full[b].astype(str)
-        name = f"f4_joint_nunique__{a}__x__{b}"
-        feats[name] = joint.groupby(full[sk]).nunique().reindex(base_index, fill_value=0)
-        feat_dict.append(_d(name, f"{cfg.col_label(a)}×{cfg.col_label(b)} 联合组合的去重数"))
+        jt = train_df[a].astype(str) + "_" + train_df[b].astype(str)
+        top_combos = list(jt.value_counts().head(cfg.top_k_categories).index)
+        for w in windows:
+            wtag = "all" if w is None else f"{w}d"
+            win = window_slice(df, w)
+            joint = win[a].astype(str) + "_" + win[b].astype(str)
+            for combo in top_combos:
+                sub = win[joint.values == combo]
+                gsub = sub.groupby(sub[sk])
+                cname = f"f4_cnt_{wtag}__{a}x{b}={combo}"
+                feats[cname] = gsub.size().reindex(base_index, fill_value=0)
+                feat_dict.append(_d(cname, f"近{wtag} {cfg.col_label(a)}×{cfg.col_label(b)}={combo} 的笔数"))
+                if m0:
+                    aname = f"f4_{m0}sum_{wtag}__{a}x{b}={combo}"
+                    feats[aname] = gsub[m0].sum().reindex(base_index, fill_value=0)
+                    feat_dict.append(_d(aname, f"近{wtag} {cfg.col_label(a)}×{cfg.col_label(b)}={combo} 的{cfg.col_label(m0)}合计"))
 
     # ---- 类别内统计：主类别金额相对 train 类别均值的偏离 ----
     if cfg.measure_cols and cfg.dim_cols:
         m0 = cfg.measure_cols[0]
+        full = window_slice(df, None)
         train_events = df[train_mask]
         for c in cfg.dim_cols:
             cat_mean = train_events.groupby(c)[m0].mean()              # train 各类别均值

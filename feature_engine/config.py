@@ -38,6 +38,7 @@ class FeatureConfig:
     # ---- 参与衍生的列 ----
     dim_cols: List[str] = field(default_factory=list)      # 可聚合的分类维度列
     measure_cols: List[str] = field(default_factory=list)  # 数值度量列
+    distinct_cols: List[str] = field(default_factory=list) # 去重计数列：算窗口内唯一值个数（如机构数）
     # 列中文释义：{列名: 中文名}，用于特征描述与数据字典，如 {"amount": "交易金额"}
     col_aliases: Dict[str, str] = field(default_factory=dict)
 
