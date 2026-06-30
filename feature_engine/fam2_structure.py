@@ -31,7 +31,7 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
         cnt = full.groupby(sk).size()
         name = f"f2_{m0}_per_event"
         feats[name] = safe_divide(amt, cnt)
-        feat_dict.append(_d(name, f"单笔平均{m0}（客单价）"))
+        feat_dict.append(_d(name, f"单笔平均{cfg.col_label(m0)}（客单价）"))
 
     # ---- 按维度：占比 + 集中度 ----
     for c in cfg.dim_cols:
@@ -58,10 +58,10 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
         for col in conc.columns:
             feats[col] = conc[col].reindex(base_index)
         feat_dict += [
-            _d(f"f2_{c}_hhi", f"{c} 金额集中度 HHI（越大越集中）"),
-            _d(f"f2_{c}_gini", f"{c} 金额基尼系数"),
-            _d(f"f2_{c}_top1_share", f"{c} 占比最高类别的份额"),
-            _d(f"f2_{c}_active_cnt", f"{c} 活跃类别数"),
+            _d(f"f2_{c}_hhi", f"{cfg.col_label(c)} 金额集中度 HHI（越大越集中）"),
+            _d(f"f2_{c}_gini", f"{cfg.col_label(c)} 金额基尼系数"),
+            _d(f"f2_{c}_top1_share", f"{cfg.col_label(c)} 占比最高类别的份额"),
+            _d(f"f2_{c}_active_cnt", f"{cfg.col_label(c)} 活跃类别数"),
         ]
 
         # top-K 类别各自的占比（份额）；打标列用规则名全集，普通列用 train top-K
@@ -77,7 +77,7 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
             name = f"f2_share_{c}={cat}"
             feats[name] = safe_divide(cat_amt.reindex(base_index, fill_value=0),
                                       total_amt.reindex(base_index, fill_value=0))
-            feat_dict.append(_d(name, f"{c}={cat} 占该维度总额的比例"))
+            feat_dict.append(_d(name, f"{cfg.col_label(c)}={cat} 占该维度总额的比例"))
 
     out = pd.DataFrame(feats)
     return out, feat_dict

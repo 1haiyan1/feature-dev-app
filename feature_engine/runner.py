@@ -14,8 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from . import (fam0_event_agg, fam1_time_dynamics, fam2_structure,
-               fam3_position, fam4_cross, fam5_encoding)
+from . import (fam0_event_agg, fam1_time_dynamics, fam2_structure, fam4_cross)
 from .base import (add_window_helpers, apply_tags, compute_obs_point,
                    ensure_datetime, get_train_mask)
 from .config import FeatureConfig
@@ -86,18 +85,9 @@ def run(df_raw: pd.DataFrame, cfg: FeatureConfig
     base_feat_df = (pd.concat(parts, axis=1) if parts
                     else pd.DataFrame(index=base_index))
 
-    # ---- 派生家族 3/4 (依赖基础特征) ----
-    if 3 in families and len(base_feat_df.columns):
-        f, d = fam3_position.generate(base_feat_df, sample_train_mask, cfg)
-        parts.append(f); feat_dict += d
+    # ---- 交叉组合 4 (依赖基础特征) ----
     if 4 in families and len(base_feat_df.columns):
         f, d = fam4_cross.generate(base_feat_df, df, cfg, train_mask, sample_train_mask)
-        parts.append(f); feat_dict += d
-
-    # ---- 类别编码 5 (需要 label) ----
-    if 5 in families and cfg.label_col:
-        sample_label = _sample_label(df, sk, cfg.label_col, base_index)
-        f, d = fam5_encoding.generate(df, cfg, train_mask, sample_label, base_index)
         parts.append(f); feat_dict += d
 
     wide = pd.concat(parts, axis=1) if parts else pd.DataFrame(index=base_index)
@@ -170,22 +160,20 @@ def _copy_cfg_with_dim(cfg: FeatureConfig, extra_dim: str) -> FeatureConfig:
 def _build_feature_dict(feat_dict: List[Dict], wide: pd.DataFrame,
                         cfg: FeatureConfig, sample_train_mask: pd.Series,
                         base_index: pd.Index) -> pd.DataFrame:
-    """给每个特征补 dtype / 缺失率 / train 分布摘要，方便"特征结构"页查看。"""
+    """给每个特征补 dtype / 缺失率 / 全样本均值标准差，方便查看与做数据字典。"""
     rows = []
-    train_pos = sample_train_mask.reindex(base_index, fill_value=False).to_numpy()
     for item in feat_dict:
         name = item["name"]
         if name not in wide.columns:
             continue
         col = pd.to_numeric(wide[name], errors="coerce")
-        tv = col[train_pos]
         rows.append({
             "特征名": name,
             "家族": f"{item['family']} {item['family_name']}",
             "含义": item["desc"],
             "dtype": str(wide[name].dtype),
             "缺失率": round(float(wide[name].isna().mean()), 4),
-            "train均值": round(float(tv.mean()), 4) if tv.notna().any() else np.nan,
-            "train标准差": round(float(tv.std()), 4) if tv.notna().any() else np.nan,
+            "均值": round(float(col.mean()), 4) if col.notna().any() else np.nan,
+            "标准差": round(float(col.std()), 4) if col.notna().any() else np.nan,
         })
     return pd.DataFrame(rows)

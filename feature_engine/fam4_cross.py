@@ -47,7 +47,7 @@ def generate(base_feat_df: pd.DataFrame, df: pd.DataFrame, cfg: FeatureConfig,
         joint = full[a].astype(str) + "|" + full[b].astype(str)
         name = f"f4_joint_nunique__{a}__x__{b}"
         feats[name] = joint.groupby(full[sk]).nunique().reindex(base_index, fill_value=0)
-        feat_dict.append(_d(name, f"{a}×{b} 联合组合的去重数"))
+        feat_dict.append(_d(name, f"{cfg.col_label(a)}×{cfg.col_label(b)} 联合组合的去重数"))
 
     # ---- 类别内统计：主类别金额相对 train 类别均值的偏离 ----
     if cfg.measure_cols and cfg.dim_cols:
@@ -63,7 +63,7 @@ def generate(base_feat_df: pd.DataFrame, df: pd.DataFrame, cfg: FeatureConfig,
             ref = modal.map(cat_mean).fillna(global_mean)
             name = f"f4_within_{c}_dev_{m0}"
             feats[name] = (samp_amt.reindex(base_index) - ref.reindex(base_index))
-            feat_dict.append(_d(name, f"样本{m0}均值相对其主{c}类别(train)均值的偏离"))
+            feat_dict.append(_d(name, f"样本{cfg.col_label(m0)}均值相对其主{cfg.col_label(c)}类别均值的偏离"))
 
     out = pd.DataFrame(feats, index=base_index)
     return out, feat_dict

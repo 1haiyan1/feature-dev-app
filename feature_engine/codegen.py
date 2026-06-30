@@ -24,9 +24,7 @@ _FILE_ORDER = [
     ("fam0",   "fam0_event_agg.py"),
     ("fam1",   "fam1_time_dynamics.py"),
     ("fam2",   "fam2_structure.py"),
-    ("fam3",   "fam3_position.py"),
     ("fam4",   "fam4_cross.py"),
-    ("fam5",   "fam5_encoding.py"),
     ("runner", "runner.py"),
 ]
 
@@ -35,18 +33,14 @@ _MODULE_REWRITES = {
     "fam0_event_agg.generate":  "fam0_generate",
     "fam1_time_dynamics.generate": "fam1_generate",
     "fam2_structure.generate":  "fam2_generate",
-    "fam3_position.generate":   "fam3_generate",
     "fam4_cross.generate":      "fam4_generate",
-    "fam5_encoding.generate":   "fam5_generate",
 }
 
 _FAM_DESC = {
     0: "事件聚合（窗口×筛选×度量×聚合）",
     1: "时间动态（跨窗口比值、斜率、衰减、recency）",
     2: "结构比例（占比、HHI、基尼、客单价）",
-    3: "相对位置（train 分位排名、z-score、分箱）",
     4: "交叉组合（数值×数值、类别联合、类别内偏离）",
-    5: "类别编码（频率/目标/WOE，train 拟合）",
 }
 
 
@@ -147,10 +141,12 @@ def _format_config(cfg: FeatureConfig) -> str:
 
 
 def generate_code(cfg: FeatureConfig, input_path: str = "your_data.csv",
-                  output_path: str = "features.parquet") -> str:
+                  output_path: str = "features.parquet",
+                  dict_path: str = "features_dict.csv") -> str:
     """生成完整独立的 pandas 脚本字符串。"""
     cfg_block = _format_config(cfg)
-    fam_notes = "\n".join(f"#   - Fam{i}: {_FAM_DESC[i]}" for i in cfg.enabled_families())
+    fam_notes = "\n".join(f"#   - Fam{i}: {_FAM_DESC[i]}"
+                          for i in cfg.enabled_families() if i in _FAM_DESC)
     engine = _bundle_engine()
     return f'''# -*- coding: utf-8 -*-
 """自动生成的特征衍生脚本 —— 独立可跑，仅依赖 pandas / numpy。
@@ -162,11 +158,10 @@ def generate_code(cfg: FeatureConfig, input_path: str = "your_data.csv",
 {fam_notes}
 
 更新策略：{cfg.update_policy}（lag_days={cfg.update_lag_days}）
-train/test 原则：所有分位/排名/编码类统计仅在 data_set=='{cfg.train_value}' 上拟合，
-                  再映射到全体，避免数据泄漏。
+说明：均为纯统计类特征，不依赖样本划分与标签。
 
 用法：
-    pip install pandas numpy pyarrow
+    pip install pandas numpy
     python {Path(output_path).stem}.py
 """
 from __future__ import annotations
@@ -186,6 +181,7 @@ import pandas as pd
 
 INPUT_PATH = r"{input_path}"
 OUTPUT_PATH = r"{output_path}"
+DICT_PATH = r"{dict_path}"
 
 
 {engine}
@@ -213,7 +209,11 @@ def main():
         wide.to_parquet(OUTPUT_PATH, index=False)
     else:
         wide.to_csv(OUTPUT_PATH, index=False, encoding="utf-8-sig")
-    print(f"已保存 -> {{OUTPUT_PATH}}")
+    print(f"已保存特征宽表 -> {{OUTPUT_PATH}}")
+    # 数据字典：特征名 / 家族 / 含义 / dtype / 缺失率 / 均值 / 标准差
+    dict_path = DICT_PATH
+    feat_dict.to_csv(dict_path, index=False, encoding="utf-8-sig")
+    print(f"已保存数据字典 -> {{dict_path}}（共 {{len(feat_dict)}} 个特征）")
 
 
 if __name__ == "__main__":

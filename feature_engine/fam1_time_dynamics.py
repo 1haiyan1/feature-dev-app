@@ -38,7 +38,7 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
             name = f"f1_{m0}_ratio_{short}d_over_{long}d"
             feats[name] = safe_divide(amt_by_win[short].reindex(base_index, fill_value=0),
                                       amt_by_win[long].reindex(base_index, fill_value=0))
-            feat_dict.append(_d(name, f"近{short}天与近{long}天 {m0} 金额比"))
+            feat_dict.append(_d(name, f"近{short}天与近{long}天 {cfg.col_label(m0)} 金额比"))
 
     # ---- 斜率与波动：按周分桶的事件数序列 ----
     full = window_slice(df, None).copy()

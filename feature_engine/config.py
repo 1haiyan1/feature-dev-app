@@ -38,6 +38,8 @@ class FeatureConfig:
     # ---- 参与衍生的列 ----
     dim_cols: List[str] = field(default_factory=list)      # 可聚合的分类维度列
     measure_cols: List[str] = field(default_factory=list)  # 数值度量列
+    # 列中文释义：{列名: 中文名}，用于特征描述与数据字典，如 {"amount": "交易金额"}
+    col_aliases: Dict[str, str] = field(default_factory=dict)
 
     # ---- 衍生参数 ----
     windows: List[int] = field(default_factory=lambda: list(DEFAULT_WINDOWS))
@@ -86,9 +88,9 @@ class FeatureConfig:
     fam0_event_agg: bool = True
     fam1_time_dynamics: bool = True
     fam2_structure: bool = True
-    fam3_position: bool = True
+    fam3_position: bool = False
     fam4_cross: bool = True
-    fam5_encoding: bool = True
+    fam5_encoding: bool = False
 
     # ---- 数据集取值 ----
     train_value: str = "train"
@@ -107,3 +109,8 @@ class FeatureConfig:
     def enabled_families(self) -> List[int]:
         """返回开启的家族编号列表，如 [0, 1, 2]。"""
         return [i for i, flag in self.FAMILY_FLAGS.items() if getattr(self, flag)]
+
+    def col_label(self, col: str) -> str:
+        """列的展示名：有中文释义则返回「中文名(列名)」，否则返回列名本身。"""
+        alias = (self.col_aliases or {}).get(col)
+        return f"{alias}({col})" if alias else col

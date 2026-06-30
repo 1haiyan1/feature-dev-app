@@ -59,14 +59,14 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
                     continue
                 name = f"f0_{m}_{agg}_{tag}"
                 feats[name] = g[m].agg(func)
-                feat_dict.append(_d(name, f"近{tag} {m} 的{agg}"))
+                feat_dict.append(_d(name, f"近{tag} {cfg.col_label(m)} 的{agg}"))
 
         # 维度去重类别数
         if "nunique" in cfg.aggs:
             for c in cfg.dim_cols:
                 name = f"f0_{c}_nunique_{tag}"
                 feats[name] = g[c].nunique()
-                feat_dict.append(_d(name, f"近{tag} {c} 的去重类别数"))
+                feat_dict.append(_d(name, f"近{tag} {cfg.col_label(c)} 的去重类别数"))
 
         # 维度 top-K 类别 pivot：分类计数 + 分类金额
         for c in cfg.dim_cols:
@@ -75,13 +75,13 @@ def generate(df: pd.DataFrame, cfg: FeatureConfig, train_mask: pd.Series
                 gsub = sub.groupby(sk)
                 cname = f"f0_cnt_{tag}__{c}={cat}"
                 feats[cname] = gsub.size()
-                feat_dict.append(_d(cname, f"近{tag} {c}={cat} 的笔数"))
+                feat_dict.append(_d(cname, f"近{tag} {cfg.col_label(c)}={cat} 的笔数"))
                 # 若有第一个度量列，再出该类别的金额和
                 if cfg.measure_cols:
                     m0 = cfg.measure_cols[0]
                     aname = f"f0_{m0}sum_{tag}__{c}={cat}"
                     feats[aname] = gsub[m0].sum()
-                    feat_dict.append(_d(aname, f"近{tag} {c}={cat} 的{m0}合计"))
+                    feat_dict.append(_d(aname, f"近{tag} {cfg.col_label(c)}={cat} 的{cfg.col_label(m0)}合计"))
 
     out = pd.DataFrame(feats)
     # 计数类缺失补 0；统计类（mean/std/max/min）保留 NaN 交由下游处理
