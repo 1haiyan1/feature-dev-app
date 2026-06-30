@@ -69,8 +69,8 @@ _FAM_HELP = {
        "指数衰减加权事件数、recency（距最近/最早事件天数）。回答「趋势在变好还是变坏」。",
     2: "结构比例：各类别金额占比、客单价（金额/笔数）、集中度（HHI、基尼、top1 占比、活跃类别数）。"
        "回答「钱花在哪、有多集中」。",
-    4: "交叉组合：方差最大的基础特征两两比值/差值、维度两两联合去重数、"
-       "样本金额相对其主类别均值的偏离。回答「两维叠加后的信号」。",
+    4: "交叉组合：方差最大的基础特征两两比值/差值；维度两两拼成交叉派生维度（如 渠道×商户类型→线上_餐饮），"
+       "对 top-K 组合按窗口算笔数与金额合计；样本金额相对其主类别均值的偏离。回答「两维叠加后的信号」。",
 }
 fam_flags = {
     0: st.sidebar.checkbox("Fam0 事件聚合", True, help=_FAM_HELP[0]),
@@ -130,6 +130,18 @@ meas_edit = st.data_editor(
         "中文释义": st.column_config.TextColumn("中文释义", help="用于特征描述与数据字典，可空"),
     })
 
+# ---- 去重计数列 + 中文释义 ----
+st.markdown("**去重计数列** — 算窗口内唯一值个数（如机构数、设备数、城市数）")
+if "dist_rows" not in st.session_state:
+    st.session_state["dist_rows"] = [{"列名": "org_id", "中文释义": "机构"}]
+dist_edit = st.data_editor(
+    pd.DataFrame(st.session_state["dist_rows"]), num_rows="dynamic",
+    use_container_width=True, key="dist_editor",
+    column_config={
+        "列名": st.column_config.TextColumn("列名", required=True, help="如 org_id / device_id"),
+        "中文释义": st.column_config.TextColumn("中文释义", help="如 机构 / 设备，可空"),
+    })
+
 
 def _rows_to_cols_aliases(edited):
     """data_editor 结果 -> (列名列表, {列名:中文释义})。"""
@@ -148,7 +160,8 @@ def _rows_to_cols_aliases(edited):
 
 dim_cols, dim_aliases = _rows_to_cols_aliases(dim_edit)
 measure_cols, meas_aliases = _rows_to_cols_aliases(meas_edit)
-col_aliases = {**dim_aliases, **meas_aliases}
+distinct_cols, dist_aliases = _rows_to_cols_aliases(dist_edit)
+col_aliases = {**dim_aliases, **meas_aliases, **dist_aliases}
 
 
 def _parse_key(text, default):
@@ -164,6 +177,7 @@ def build_cfg() -> FeatureConfig:
         sample_key=_parse_key(sk, "sample_key"), txn_key=_parse_key(tk, None),
         time_col=tc or None, dateback_col=dbc or None,
         dim_cols=list(dim_cols), measure_cols=list(measure_cols),
+        distinct_cols=list(distinct_cols),
         col_aliases=dict(col_aliases),
         windows=list(windows) or list(DEFAULT_WINDOWS),
         aggs=list(DEFAULT_AGGS), top_k_categories=top_k,
