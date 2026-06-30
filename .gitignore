@@ -1,0 +1,30 @@
+# ---- 测试 / 自测脚本（含本地绝对路径，不上传）----
+_test_*.py
+_selftest.py
+
+# ---- 运行日志 ----
+*.log
+_st*.log
+
+# ---- 数据 / 产物（演示数据可单独保留，大产物不传）----
+gen_out.csv
+*_out.csv
+features.csv
+features.parquet
+
+# ---- Python 缓存 ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- 环境 / IDE ----
+.venv/
+venv/
+.env
+.vscode/
+.idea/
+.DS_Store
+
+# ---- Streamlit 本地配置（密钥等不上传）----
+.streamlit/secrets.toml
